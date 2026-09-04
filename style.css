@@ -426,6 +426,113 @@ textarea { resize: vertical; font-family: "SF Mono", Menlo, monospace; line-heig
 .diagram-wrap { display: flex; justify-content: center; }
 .no-diagram { text-align: center; color: var(--text-faint); padding: 20px 0; font-size: 14px; }
 
+.detect-btn {
+  display: block;
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px dashed var(--accent-dim);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.detect-btn:active { background: var(--surface); }
+
+/* ---------- Detect overlay ---------- */
+.detect-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 25;
+  display: none;
+}
+.detect-overlay.active { display: block; }
+.detect-panel {
+  max-width: 640px;
+  margin: 0 auto;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.detect-step { display: none; flex-direction: column; flex: 1; min-height: 0; }
+.detect-step.active { display: flex; }
+.detect-body { padding: 8px 20px 100px; flex: 1; overflow-y: auto; }
+.detect-intro { color: var(--text-dim); font-size: 14px; line-height: 1.8; margin: 4px 0 20px; }
+.detect-file-name { margin-top: 14px; font-size: 14px; color: var(--text); word-break: break-all; }
+
+.detect-progress-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding-bottom: 0;
+}
+.progress-track {
+  width: 100%;
+  max-width: 320px;
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+.detect-progress-text { color: var(--text-dim); font-size: 14px; }
+
+.segment-list { display: flex; flex-direction: column; gap: 8px; }
+.segment-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.segment-play {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--accent);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.segment-play.playing { background: var(--accent); color: var(--accent-ink); }
+.segment-time {
+  font-size: 12px;
+  color: var(--text-faint);
+  width: 84px;
+  flex-shrink: 0;
+  font-family: "SF Mono", Menlo, monospace;
+}
+.segment-chord-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.segment-delete {
+  width: 34px;
+  height: 34px;
+  color: var(--text-faint);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.empty-segments { text-align: center; color: var(--text-faint); padding: 40px 0; font-size: 14px; }
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;

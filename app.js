@@ -214,6 +214,12 @@ let editingSongId = null;
 let pendingThumbDataUrl = null;
 let searchQuery = "";
 
+// auto chord-detection state
+let detectFile = null;
+let detectFileUrl = null;
+let detectSegments = [];
+let detectPlayingIndex = -1;
+
 function showScreen(name) {
   Object.values(screens).forEach((el) => el.classList.remove("active"));
   screens[name].classList.add("active");
@@ -548,6 +554,155 @@ function showToast(msg) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
+/* ---------------- Auto chord detection ---------------- */
+
+function detectShowStep(step) {
+  ["pick", "progress", "review"].forEach((s) => {
+    document.getElementById("detect-step-" + s).classList.toggle("active", s === step);
+  });
+}
+
+function openDetectOverlay() {
+  detectFile = null;
+  detectSegments = [];
+  detectPlayingIndex = -1;
+  if (detectFileUrl) { URL.revokeObjectURL(detectFileUrl); detectFileUrl = null; }
+  document.getElementById("detect-file-input").value = "";
+  document.getElementById("detect-file-name").textContent = "";
+  document.getElementById("detect-start-btn").disabled = true;
+  document.getElementById("detect-progress-bar").style.width = "0%";
+  document.getElementById("detect-progress-text").textContent = "解析中…";
+  detectShowStep("pick");
+  document.getElementById("detect-overlay").classList.add("active");
+}
+
+function closeDetectOverlay() {
+  const audio = document.getElementById("detect-audio");
+  audio.pause();
+  if (detectFileUrl) { URL.revokeObjectURL(detectFileUrl); detectFileUrl = null; }
+  document.getElementById("detect-overlay").classList.remove("active");
+}
+
+function onDetectFileChosen(file) {
+  detectFile = file || null;
+  document.getElementById("detect-file-name").textContent = file ? file.name : "";
+  document.getElementById("detect-start-btn").disabled = !file;
+}
+
+async function runDetection() {
+  if (!detectFile) return;
+  detectShowStep("progress");
+  const bar = document.getElementById("detect-progress-bar");
+  const text = document.getElementById("detect-progress-text");
+  bar.style.width = "0%";
+
+  try {
+    const segments = await ChordDetect.analyzeFile(detectFile, (ratio, msg) => {
+      bar.style.width = Math.round(ratio * 100) + "%";
+      if (msg) text.textContent = msg;
+    });
+    detectSegments = segments.map((s) => ({ ...s }));
+    detectFileUrl = URL.createObjectURL(detectFile);
+    document.getElementById("detect-audio").src = detectFileUrl;
+    renderDetectSegments();
+    detectShowStep("review");
+  } catch (err) {
+    alert("解析に失敗しました。この形式の音源には対応していない可能性があります。");
+    detectShowStep("pick");
+  }
+}
+
+function renderDetectSegments() {
+  const list = document.getElementById("detect-segment-list");
+  if (detectSegments.length === 0) {
+    list.innerHTML = `<div class="empty-segments">コードを検出できませんでした。別の音源で試すか、手動で入力してください。</div>`;
+    return;
+  }
+  list.innerHTML = detectSegments.map((seg, i) => `
+    <div class="segment-row" data-index="${i}">
+      <button type="button" class="segment-play" data-action="play">&#9654;</button>
+      <span class="segment-time">${ChordDetect.formatTime(seg.start)}-${ChordDetect.formatTime(seg.end)}</span>
+      <input type="text" class="segment-chord-input" data-action="edit" value="${escapeHtml(seg.chord)}">
+      <button type="button" class="segment-delete" data-action="delete">&#128465;</button>
+    </div>
+  `).join("");
+}
+
+function bindDetectSegmentEvents() {
+  const list = document.getElementById("detect-segment-list");
+  list.addEventListener("click", (e) => {
+    const row = e.target.closest(".segment-row");
+    if (!row) return;
+    const idx = Number(row.dataset.index);
+    if (e.target.closest('[data-action="play"]')) {
+      playDetectSegment(idx, e.target.closest(".segment-play"));
+    } else if (e.target.closest('[data-action="delete"]')) {
+      detectSegments.splice(idx, 1);
+      renderDetectSegments();
+    }
+  });
+  list.addEventListener("input", (e) => {
+    if (e.target.dataset.action === "edit") {
+      const row = e.target.closest(".segment-row");
+      const idx = Number(row.dataset.index);
+      detectSegments[idx].chord = e.target.value;
+    }
+  });
+}
+
+function playDetectSegment(idx, btnEl) {
+  const audio = document.getElementById("detect-audio");
+  document.querySelectorAll(".segment-play.playing").forEach((b) => b.classList.remove("playing"));
+
+  if (detectPlayingIndex === idx && !audio.paused) {
+    audio.pause();
+    detectPlayingIndex = -1;
+    return;
+  }
+
+  const seg = detectSegments[idx];
+  const previewEnd = seg.start + Math.min(6, seg.end - seg.start);
+  audio.currentTime = seg.start;
+  audio.play();
+  detectPlayingIndex = idx;
+  btnEl.classList.add("playing");
+
+  const onTime = () => {
+    if (audio.currentTime >= previewEnd) {
+      audio.pause();
+      audio.removeEventListener("timeupdate", onTime);
+      btnEl.classList.remove("playing");
+      detectPlayingIndex = -1;
+    }
+  };
+  audio.addEventListener("timeupdate", onTime);
+  audio.addEventListener("pause", () => btnEl.classList.remove("playing"), { once: true });
+}
+
+function applyDetectSegments() {
+  const validSegments = detectSegments.filter((s) => s.chord && s.chord.trim());
+  if (validSegments.length === 0) {
+    showToast("反映するコードがありません");
+    return;
+  }
+  const lines = validSegments.map((s) => `${ChordDetect.formatTime(s.start)}  ${s.chord.trim()}`);
+  const text = "[自動検出]\n" + lines.join("\n");
+
+  const textarea = document.getElementById("field-chords");
+  const existing = textarea.value.trim();
+  if (existing) {
+    if (!confirm("既にコード譜が入力されています。末尾に追記しますか？(キャンセルで中止)")) return;
+    textarea.value = existing + "\n\n" + text;
+  } else {
+    textarea.value = text;
+  }
+  closeDetectOverlay();
+  showToast("コード譜に反映しました");
+  if (typeof textarea.scrollIntoView === "function") {
+    textarea.scrollIntoView({ block: "center" });
+  }
+}
+
 /* ---------------- Wiring ---------------- */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -593,6 +748,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.files[0]) importBackup(e.target.files[0]);
     e.target.value = "";
   });
+
+  document.getElementById("open-detect-btn").addEventListener("click", openDetectOverlay);
+  document.getElementById("detect-close-btn").addEventListener("click", closeDetectOverlay);
+  document.getElementById("detect-file-pick-btn").addEventListener("click", () => {
+    document.getElementById("detect-file-input").click();
+  });
+  document.getElementById("detect-file-input").addEventListener("change", (e) => {
+    onDetectFileChosen(e.target.files[0]);
+  });
+  document.getElementById("detect-start-btn").addEventListener("click", runDetection);
+  document.getElementById("detect-apply-btn").addEventListener("click", applyDetectSegments);
+  bindDetectSegmentEvents();
 });
 
 /* ---------------- Service worker ---------------- */

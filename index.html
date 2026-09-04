@@ -91,6 +91,7 @@
       </div>
       <div class="field">
         <label for="field-chords">コード譜</label>
+        <button type="button" id="open-detect-btn" class="detect-btn">&#127925; 音源から自動検出</button>
         <textarea id="field-chords" class="chords-input" placeholder="[Intro]&#10;G    D    Em    C&#10;&#10;[Aメロ]&#10;G          D&#10;Em         C"></textarea>
       </div>
       <div class="field">
@@ -152,8 +153,56 @@
   </div>
 </div>
 
+<!-- Auto chord detection overlay -->
+<div id="detect-overlay" class="detect-overlay">
+  <div class="detect-panel">
+    <div class="topbar">
+      <button id="detect-close-btn" class="icon-btn" aria-label="閉じる">&#10005;</button>
+      <div class="topbar-title">音源から自動検出</div>
+      <div class="topbar-spacer"></div>
+    </div>
+
+    <div id="detect-step-pick" class="detect-step active">
+      <div class="detect-body">
+        <p class="detect-intro">
+          MP3/WAVなどの音源ファイルを選ぶと、ブラウザ内だけでコード進行を推定します。
+          音源はどこにも送信されません。数分の曲でも数秒〜十数秒かかります。
+        </p>
+        <button type="button" id="detect-file-pick-btn" class="pick-btn">音源ファイルを選ぶ</button>
+        <input type="file" id="detect-file-input" accept="audio/*" style="display:none">
+        <p id="detect-file-name" class="detect-file-name"></p>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="detect-start-btn" class="btn-primary" disabled>解析する</button>
+      </div>
+    </div>
+
+    <div id="detect-step-progress" class="detect-step">
+      <div class="detect-body detect-progress-body">
+        <div class="progress-track"><div id="detect-progress-bar" class="progress-bar"></div></div>
+        <p id="detect-progress-text" class="detect-progress-text">解析中…</p>
+      </div>
+    </div>
+
+    <div id="detect-step-review" class="detect-step">
+      <div class="detect-body">
+        <p class="detect-intro">
+          推定結果です。間違っていそうな箇所は▶で聴き直して、テキストを修正できます。
+          不要な行は「削除」で消せます。
+        </p>
+        <div id="detect-segment-list" class="segment-list"></div>
+      </div>
+      <div class="form-actions">
+        <button type="button" id="detect-apply-btn" class="btn-primary">コード譜に反映する</button>
+      </div>
+    </div>
+  </div>
+</div>
+<audio id="detect-audio" style="display:none"></audio>
+
 <div id="toast" class="toast"></div>
 
+<script src="detect.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

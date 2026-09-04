@@ -1,8 +1,9 @@
-const CACHE_NAME = "guitar-library-v1";
+const CACHE_NAME = "guitar-library-v2";
 const APP_SHELL = [
   "./index.html",
   "./style.css",
   "./app.js",
+  "./detect.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
