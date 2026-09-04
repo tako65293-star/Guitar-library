@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Guitar Library</title>
+<meta name="theme-color" content="#14110F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Guitar Lib">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ HOME ============ -->
+  <section id="screen-home" class="screen">
+    <div class="home-header">
+      <div class="home-title-row">
+        <p class="home-title">GUITAR LIBRARY</p>
+        <button id="settings-open-btn" class="icon-btn" aria-label="設定">&#9881;</button>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">&#128269;</span>
+        <input id="search-input" type="search" placeholder="曲名・アーティストで検索" autocomplete="off" enterkeyhint="search">
+      </div>
+    </div>
+    <div id="home-body" class="home-body"></div>
+    <button id="fab-add" class="fab">＋ 曲を追加</button>
+  </section>
+
+  <!-- ============ SONG DETAIL ============ -->
+  <section id="screen-song" class="screen">
+    <div class="topbar">
+      <button id="song-back-btn" class="icon-btn" aria-label="戻る">&#8592;</button>
+      <div class="topbar-title">GUITAR LIBRARY</div>
+      <button id="song-edit-btn" class="icon-btn" aria-label="編集">&#9998;</button>
+    </div>
+    <div class="song-header">
+      <h1 id="song-title"></h1>
+      <p class="artist" id="song-artist"></p>
+      <div class="badge-row" id="song-badges"></div>
+    </div>
+    <div class="tabs">
+      <button id="tab-btn-chords" class="tab-btn active">コード譜</button>
+      <button id="tab-btn-tab" class="tab-btn">TAB譜</button>
+    </div>
+    <div class="song-body">
+      <div id="pane-chords" class="pane active"></div>
+      <div id="pane-tab" class="pane"></div>
+      <div id="song-memo" class="memo-block"></div>
+    </div>
+  </section>
+
+  <!-- ============ ADD / EDIT FORM ============ -->
+  <section id="screen-form" class="screen">
+    <div class="topbar">
+      <button id="form-back-btn" class="icon-btn" aria-label="戻る">&#8592;</button>
+      <div class="topbar-title" id="form-title-label">曲を追加</div>
+      <div class="topbar-spacer"></div>
+    </div>
+    <form id="song-form" class="form-body">
+      <div class="field">
+        <label for="field-title">曲名</label>
+        <input id="field-title" type="text" placeholder="例: 新宝島" required>
+      </div>
+      <div class="field">
+        <label for="field-artist">アーティスト</label>
+        <input id="field-artist" type="text" placeholder="例: サカナクション">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="field-key">Key</label>
+          <input id="field-key" type="text" placeholder="例: G">
+        </div>
+        <div class="field">
+          <label for="field-capo">Capo</label>
+          <input id="field-capo" type="text" placeholder="例: なし / 1">
+        </div>
+      </div>
+      <div class="field">
+        <label>サムネイル画像 (任意)</label>
+        <div class="thumb-picker">
+          <img id="thumb-preview" class="thumb-preview" style="display:none" alt="">
+          <button type="button" id="thumb-pick-btn" class="pick-btn">画像を選ぶ</button>
+          <input type="file" id="thumb-input" accept="image/*" style="display:none">
+        </div>
+      </div>
+      <div class="field">
+        <label for="field-chords">コード譜</label>
+        <textarea id="field-chords" class="chords-input" placeholder="[Intro]&#10;G    D    Em    C&#10;&#10;[Aメロ]&#10;G          D&#10;Em         C"></textarea>
+      </div>
+      <div class="field">
+        <label for="field-tab">TAB譜 (任意)</label>
+        <textarea id="field-tab" class="tab-input" placeholder="e|----------------|&#10;B|----------------|&#10;G|------4-5-4-----|&#10;D|----5-7-----7-5-|&#10;A|----------------|&#10;E|----------------|"></textarea>
+      </div>
+      <div class="field">
+        <label for="field-memo">メモ (任意)</label>
+        <textarea id="field-memo" class="memo-input" placeholder="弾き方のコツ、アレンジのメモなど"></textarea>
+      </div>
+    </form>
+    <div class="form-actions">
+      <button type="button" id="form-delete-btn" class="btn-secondary" style="display:none">削除</button>
+      <button type="submit" form="song-form" class="btn-primary">保存する</button>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="screen-settings" class="screen">
+    <div class="topbar">
+      <button id="settings-back-btn" class="icon-btn" aria-label="戻る">&#8592;</button>
+      <div class="topbar-title">設定</div>
+      <div class="topbar-spacer"></div>
+    </div>
+    <div class="settings-body">
+      <div class="settings-group">
+        <h2>バックアップ</h2>
+        <div class="settings-row">
+          <span>データを書き出す<span class="hint">JSONファイルとして保存します</span></span>
+          <button id="export-btn" class="settings-btn">書き出す</button>
+        </div>
+        <div class="settings-row">
+          <span>データを読み込む<span class="hint">バックアップファイルから復元します</span></span>
+          <button id="import-btn" class="settings-btn">読み込む</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json">
+      </div>
+      <div class="settings-group">
+        <h2>このアプリについて</h2>
+        <p style="color:var(--text-dim); font-size:13px; line-height:1.8; padding: 0 4px;">
+          データは端末内(ブラウザのIndexedDB)にのみ保存され、外部には送信されません。
+          iPhone Safariでは長期間アプリを使わないとデータが消える場合があるため、
+          ときどき「書き出し」でバックアップを取ることをおすすめします。
+        </p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Chord diagram bottom sheet -->
+<div id="chord-sheet" class="sheet-overlay">
+  <div class="sheet">
+    <h3 id="sheet-chord-name"></h3>
+    <div class="diagram-wrap" id="sheet-diagram"></div>
+    <div class="sheet-close-row">
+      <button id="sheet-close-btn">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
