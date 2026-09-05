@@ -12,7 +12,7 @@
    デプロイのたびにここの数字を必ず上げること。
    (あわせて sw.js の CACHE_NAME も上げないと
     Service Workerのキャッシュが更新されず古いままになる) */
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 const APP_BUILD_DATE = "2026-09-05";
 
 /* ---------------- IndexedDB layer ---------------- */
@@ -746,6 +746,9 @@ function renderPlayPane(song) {
           <span class="play-next-name" id="play-next-name"></span>
         </div>
         <div class="play-chord-name is-empty" id="play-chord-name">${hasTimeline ? "再生してください" : "&#9834;"}</div>
+        <div class="play-next-progress hidden" id="play-next-progress">
+          <div class="play-next-progress-fill" id="play-next-progress-fill"></div>
+        </div>
         <div class="play-chord-diagram" id="play-chord-diagram"></div>
       </div>
       ${hasTimeline ? `
@@ -804,6 +807,8 @@ function updatePlayUIForTime(t) {
   const nextWrap = document.getElementById("play-chord-next");
   const nextNameEl = document.getElementById("play-next-name");
   const sectionEl = document.getElementById("play-section-label");
+  const progressWrap = document.getElementById("play-next-progress");
+  const progressFill = document.getElementById("play-next-progress-fill");
 
   if (playTimeline.length === 0) return;
 
@@ -822,6 +827,25 @@ function updatePlayUIForTime(t) {
     nameEl.classList.add("is-empty");
     diagramEl.innerHTML = "";
     sectionEl.innerHTML = "&nbsp;";
+  }
+
+  // Visual countdown: fills up as we approach the next chord change,
+  // so it's obvious at a glance how soon to switch chords (not just a number).
+  if (progressWrap && progressFill) {
+    const audioEl = document.getElementById("play-audio");
+    const segEndEntry = idx >= 0 ? playTimeline[idx + 1] : playTimeline[0];
+    const segStart = current ? current.time : 0;
+    const segEnd = segEndEntry
+      ? segEndEntry.time
+      : (audioEl && audioEl.duration && isFinite(audioEl.duration) ? audioEl.duration : null);
+    if (current && segEnd !== null && segEnd > segStart) {
+      const pct = Math.min(1, Math.max(0, (t - segStart) / (segEnd - segStart)));
+      progressFill.style.width = (pct * 100) + "%";
+      progressWrap.classList.remove("hidden");
+      progressWrap.classList.toggle("is-close", pct >= 0.85);
+    } else {
+      progressWrap.classList.add("hidden");
+    }
   }
 
   if (next && next !== current) {

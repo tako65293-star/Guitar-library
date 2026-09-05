@@ -618,6 +618,30 @@ textarea { resize: vertical; font-family: "SF Mono", Menlo, monospace; line-heig
 .play-chord-diagram svg { width: 150px; height: auto; }
 .play-chord-diagram .no-diagram { font-size: 13px; }
 
+/* Visual "time until next chord" bar: empty right after a chord change,
+   fills left->right, and glows/turns warm just before the next change. */
+.play-next-progress {
+  width: min(220px, 90%);
+  height: 6px;
+  margin-top: 12px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.play-next-progress.hidden { display: none; }
+.play-next-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  transition: width 0.12s linear, background-color 0.2s;
+}
+.play-next-progress.is-close .play-next-progress-fill {
+  background: var(--accent);
+  box-shadow: 0 0 8px 0 var(--accent);
+}
+
 .play-chord-next {
   position: absolute;
   top: 14px;
