@@ -12,7 +12,7 @@
    デプロイのたびにここの数字を必ず上げること。
    (あわせて sw.js の CACHE_NAME も上げないと
     Service Workerのキャッシュが更新されず古いままになる) */
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 const APP_BUILD_DATE = "2026-09-05";
 
 /* ---------------- IndexedDB layer ---------------- */
@@ -124,6 +124,62 @@ const CHORD_SHAPES = {
   "Bb":      { frets: [-1,1,3,3,3,1], base: 1, barre: 1 },
 };
 
+/* ---------------- Movable (barre) shape generator ----------------
+   CHORD_SHAPES above only covers ~30 hand-picked open-position chords.
+   For everything else, generate a diagram from a small set of verified
+   "CAGED" movable shapes (E-shape / A-shape) by transposing along the
+   fretboard. This is how real guitarists play any chord in any key
+   from just a handful of shapes, so it stays accurate while covering
+   all 12 roots x many chord qualities.
+   ------------------------------------------------------------------ */
+
+// Pitch class of each root name (0=C ... 11=B), sharps and flats both accepted.
+const ROOT_PITCH_CLASS = {
+  "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, "E": 4, "F": 5,
+  "F#": 6, "Gb": 6, "G": 7, "G#": 8, "Ab": 8, "A": 9, "A#": 10, "Bb": 10, "B": 11,
+};
+
+// Each template is a real, verified open/E-or-A-shape voicing plus the pitch
+// class of ITS OWN root, so it can be transposed by simple fret offset.
+// (frets[] order matches CHORD_SHAPES: 6th/low-E string -> 1st/high-e string)
+const MOVABLE_CHORD_TEMPLATES = {
+  "":     { frets: [0, 2, 2, 1, 0, 0],  rootPc: 4 }, // E-shape major
+  "m":    { frets: [0, 2, 2, 0, 0, 0],  rootPc: 4 }, // E-shape minor
+  "7":    { frets: [0, 2, 0, 1, 0, 0],  rootPc: 4 }, // E-shape dominant7
+  "m7":   { frets: [0, 2, 0, 0, 0, 0],  rootPc: 4 }, // E-shape minor7
+  "maj7": { frets: [0, 2, 1, 1, 0, 0],  rootPc: 4 }, // E-shape major7
+  "6":    { frets: [0, 2, 2, 1, 2, 0],  rootPc: 4 }, // E-shape 6
+  "m6":   { frets: [0, 2, 2, 0, 2, 0],  rootPc: 4 }, // E-shape minor6
+  "sus4": { frets: [0, 2, 2, 2, 0, 0],  rootPc: 4 }, // E-shape sus4
+  "sus2": { frets: [0, 2, 4, 4, 0, 0],  rootPc: 4 }, // E-shape sus2
+  "add9": { frets: [0, 2, 4, 1, 0, 0],  rootPc: 4 }, // E-shape add9
+  "5":    { frets: [0, 2, 2, -1, -1, -1], rootPc: 4 }, // E-shape power chord
+  "dim":  { frets: [-1, 0, 1, 2, 1, -1], rootPc: 9 }, // A-shape diminished triad
+};
+
+function buildMovableShape(rootPc, template) {
+  const offset = (rootPc - template.rootPc + 12) % 12;
+  if (offset === 0) return { frets: template.frets.slice(), base: 1 };
+  const raw = template.frets.map((f) => (f === -1 ? -1 : f + offset));
+  const fretted = raw.filter((f) => f > 0);
+  const maxFret = fretted.length ? Math.max(...fretted) : 0;
+  // If it still fits the standard 4-fret window, show it at the nut like a
+  // "cheat sheet" (matches how the hand-picked barre chords above look);
+  // otherwise shift the diagram's window up to where the barre actually is.
+  if (maxFret <= 4) return { frets: raw, base: 1, barre: offset };
+  return { frets: raw, base: offset, barre: 1 };
+}
+
+function findGeneratedChordShape(name) {
+  const m = name.match(/^([A-G])(#|b)?(.*)$/);
+  if (!m) return null;
+  const rootPc = ROOT_PITCH_CLASS[m[1] + (m[2] || "")];
+  if (rootPc === undefined) return null;
+  const template = MOVABLE_CHORD_TEMPLATES[m[3] || ""];
+  if (!template) return null;
+  return buildMovableShape(rootPc, template);
+}
+
 // Ordered longest-quality-first so "maj7" isn't swallowed by "m".
 const CHORD_QUALITIES = [
   "maj7","maj9","mmaj7","m7b5","m7-5","m9","m7","m6","m11","madd9",
@@ -168,6 +224,9 @@ function findChordShape(name) {
   // try flat->sharp normalization roughly, or strip slash bass
   const noBass = name.split("/")[0];
   if (CHORD_SHAPES[noBass]) return CHORD_SHAPES[noBass];
+  // fall back to a generated movable (barre) shape covering all 12 roots
+  const generated = findGeneratedChordShape(noBass);
+  if (generated) return generated;
   return null;
 }
 
@@ -492,7 +551,7 @@ function buildChordVariants(chordName) {
   const rootMatch = chordName.match(/^([A-G][#b]?)/);
   if (!rootMatch) return [];
   const root = rootMatch[1];
-  const qualities = ["", "m", "7", "maj7", "m7", "sus2", "sus4", "add9", "dim", "aug", "5", "m7b5"];
+  const qualities = ["", "m", "7", "maj7", "m7", "6", "m6", "sus2", "sus4", "add9", "dim", "aug", "5", "m7b5"];
   return qualities.map((q) => root + q).filter((n) => n !== chordName);
 }
 
