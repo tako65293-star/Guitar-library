@@ -765,3 +765,228 @@ input.play-seek::-moz-range-thumb {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ========================================================
+   Chord Edit Sheet (Feature 1)
+   ======================================================== */
+
+.ces-sheet {
+  padding-bottom: calc(24px + var(--safe-bottom));
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+.ces-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.ces-header h3 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--accent);
+}
+.ces-x-btn {
+  color: var(--text-faint);
+  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  margin-right: -8px;
+  margin-top: -4px;
+}
+
+.ces-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 14px 0 8px;
+  letter-spacing: 0.04em;
+}
+
+.ces-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ces-variant-btn {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 9px 14px;
+  border-radius: 10px;
+  min-width: 52px;
+  text-align: center;
+  min-height: 42px;
+}
+.ces-variant-btn:active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.ces-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+.ces-input-row input { flex: 1; }
+
+.ces-apply-btn {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 0 18px;
+  height: 48px;
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ces-apply-btn:active { opacity: 0.8; }
+
+/* ========================================================
+   Timeline Entry Edit Sheet (Feature 2)
+   ======================================================== */
+
+.tes-sheet {
+  padding-bottom: calc(16px + var(--safe-bottom));
+}
+.tes-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: var(--text);
+  text-align: left;
+}
+.tes-chord-input {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.tes-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.tes-adj-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 12px;
+  height: var(--tap);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.tes-adj-btn:active { background: var(--surface); color: var(--accent); }
+.tes-time-display {
+  flex: 1;
+  text-align: center;
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.tes-actions {
+  margin-top: 16px;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  background: none;
+  position: static;
+}
+
+/* ========================================================
+   Detect visual timeline (Feature 2)
+   ======================================================== */
+
+.detect-timeline {
+  display: flex;
+  height: 44px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.detect-tl-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: var(--accent-dim);
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 0.12s;
+  min-width: 3px;
+  border-right: 1px solid rgba(0,0,0,0.25);
+}
+.detect-tl-seg:last-child { border-right: none; }
+.detect-tl-seg:active,
+.detect-tl-seg.highlighted { background: var(--accent); }
+.detect-tl-seg span {
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0 3px;
+  pointer-events: none;
+}
+
+/* Segment time: editable input replaces static span */
+.segment-time-input {
+  font-size: 12px;
+  color: var(--text-faint);
+  width: 62px;
+  flex-shrink: 0;
+  font-family: "SF Mono", Menlo, monospace;
+  padding: 6px 6px;
+  text-align: center;
+  min-width: 0;
+  border-radius: 8px;
+}
+
+.segment-row.highlighted { border-color: var(--accent-dim); background: rgba(212,162,76,0.08); }
+
+/* ========================================================
+   Play pane edit mode (Feature 2)
+   ======================================================== */
+
+.play-edit-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 2px;
+  margin-bottom: -4px;
+}
+
+.play-edit-mode-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  min-height: 36px;
+}
+.play-edit-mode-btn.active {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  background: rgba(212,162,76,0.1);
+}
+.play-edit-mode-btn:active { opacity: 0.8; }
+
+/* In edit mode, chips pulse to indicate they're interactive */
+.play-progression.edit-mode .play-chip {
+  cursor: pointer;
+  border-style: dashed;
+  border-color: var(--accent-dim);
+}
+.play-progression.edit-mode .play-chip:active {
+  background: rgba(212,162,76,0.18);
+  transform: scale(1.04);
+}

@@ -178,6 +178,46 @@
   </div>
 </div>
 
+<!-- ============ CHORD EDIT SHEET ============ -->
+<div id="chord-edit-sheet" class="sheet-overlay">
+  <div class="sheet ces-sheet">
+    <div class="ces-header">
+      <h3 id="ces-chord-name"></h3>
+      <button id="ces-close-btn" class="icon-btn ces-x-btn" aria-label="閉じる">&#10005;</button>
+    </div>
+    <div class="diagram-wrap" id="ces-diagram"></div>
+    <p class="ces-section-label">バリエーション（タップで即反映）</p>
+    <div class="ces-variants" id="ces-variants"></div>
+    <p class="ces-section-label">コード名を直接入力</p>
+    <div class="ces-input-row">
+      <input id="ces-input" type="text" spellcheck="false" autocorrect="off" autocapitalize="characters" placeholder="例: Am7, Dsus4">
+      <button id="ces-apply-btn" class="ces-apply-btn">変更する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TIMELINE ENTRY EDIT SHEET ============ -->
+<div id="timeline-edit-sheet" class="sheet-overlay">
+  <div class="sheet tes-sheet">
+    <h3 class="tes-title">コードを修正</h3>
+    <p class="ces-section-label">コード名</p>
+    <div class="ces-variants" id="tes-variants"></div>
+    <input id="tes-chord-input" type="text" class="tes-chord-input" spellcheck="false" autocorrect="off" autocapitalize="characters" placeholder="コード名">
+    <p class="ces-section-label">開始時間</p>
+    <div class="tes-time-row">
+      <button class="tes-adj-btn" data-delta="-5">−5s</button>
+      <button class="tes-adj-btn" data-delta="-1">−1s</button>
+      <span id="tes-time-display" class="tes-time-display">0:00</span>
+      <button class="tes-adj-btn" data-delta="1">＋1s</button>
+      <button class="tes-adj-btn" data-delta="5">＋5s</button>
+    </div>
+    <div class="form-actions tes-actions">
+      <button id="tes-cancel-btn" class="btn-secondary">キャンセル</button>
+      <button id="tes-apply-btn" class="btn-primary">保存する</button>
+    </div>
+  </div>
+</div>
+
 <!-- Auto chord detection overlay -->
 <div id="detect-overlay" class="detect-overlay">
   <div class="detect-panel">
