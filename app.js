@@ -244,6 +244,16 @@ let detectFileUrl = null;
 let detectSegments = [];
 let detectPlayingIndex = -1;
 
+// chord edit sheet state (Feature 1)
+let _cesOriginalChord = null;
+
+// timeline entry edit sheet state (Feature 2)
+let _tesEntryIdx = -1;
+let _tesCurrentTime = 0;
+
+// play pane edit mode toggle (Feature 2)
+let playEditMode = false;
+
 function showScreen(name) {
   if (name !== "song") {
     const audio = document.getElementById("play-audio");
@@ -458,7 +468,7 @@ function setSongTab(which) {
 
 function bindChordTaps(container) {
   container.querySelectorAll(".chord-tok").forEach((el) => {
-    el.addEventListener("click", () => openChordSheet(el.dataset.chord));
+    el.addEventListener("click", () => openChordEditSheet(el.dataset.chord));
   });
 }
 
@@ -470,6 +480,146 @@ function openChordSheet(chordName) {
     ? buildChordDiagramSVG(shape)
     : `<div class="no-diagram">このコードのダイアグラムは未対応です</div>`;
   document.getElementById("chord-sheet").classList.add("active");
+}
+
+/* ----------------  Chord Edit Sheet (Feature 1) ----------------
+   Opens when user taps a chord token in the コード譜 pane.
+   Shows diagram + common variants (tap to instantly apply) + text input.
+   On apply: replaces ALL occurrences of that chord name in the song text.
+   ---------------------------------------------------------------- */
+
+function buildChordVariants(chordName) {
+  const rootMatch = chordName.match(/^([A-G][#b]?)/);
+  if (!rootMatch) return [];
+  const root = rootMatch[1];
+  const qualities = ["", "m", "7", "maj7", "m7", "sus2", "sus4", "add9", "dim", "aug", "5", "m7b5"];
+  return qualities.map((q) => root + q).filter((n) => n !== chordName);
+}
+
+function openChordEditSheet(chordName) {
+  _cesOriginalChord = chordName;
+  document.getElementById("ces-chord-name").textContent = chordName;
+
+  const shape = findChordShape(chordName);
+  document.getElementById("ces-diagram").innerHTML = shape
+    ? buildChordDiagramSVG(shape)
+    : '<div class="no-diagram">ダイアグラム未対応</div>';
+
+  const variants = buildChordVariants(chordName);
+  document.getElementById("ces-variants").innerHTML = variants
+    .map((c) => `<button type="button" class="ces-variant-btn" data-chord="${escapeHtml(c)}">${escapeHtml(c)}</button>`)
+    .join("");
+
+  const input = document.getElementById("ces-input");
+  input.value = chordName;
+  document.getElementById("chord-edit-sheet").classList.add("active");
+}
+
+function closeChordEditSheet() {
+  document.getElementById("chord-edit-sheet").classList.remove("active");
+}
+
+async function applyChordEdit(newName) {
+  const trimmed = (newName || "").trim();
+  if (!trimmed) return;
+  closeChordEditSheet();
+  if (trimmed === _cesOriginalChord) return;
+  await replaceChordInSong(_cesOriginalChord, trimmed);
+}
+
+async function replaceChordInSong(oldName, newName) {
+  if (!currentSongId) return;
+  const song = await dbGet(currentSongId);
+  if (!song || !song.chords) return;
+
+  // Match whole chord tokens (not inside longer words)
+  const esc = oldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?<![A-Za-z0-9])${esc}(?![A-Za-z0-9#b])`, "g");
+  const hits = (song.chords.match(re) || []).length;
+
+  if (hits === 0) { showToast("変更箇所が見つかりませんでした"); return; }
+
+  song.chords = song.chords.replace(re, newName);
+  await dbPut(song);
+  showToast(`${oldName} → ${newName} に変更（${hits}箇所）`);
+  await refreshSongScreenAfterEdit();
+}
+
+/* ----------------  Timeline Entry Edit Sheet (Feature 2) ----------------
+   Replaces the window.prompt() chord-edit in play mode.
+   Shows chord variants + text input + ±time buttons + save.
+   ---------------------------------------------------------------- */
+
+function openTimelineEditSheet(idx) {
+  const entry = playTimeline[idx];
+  if (!entry) return;
+
+  _tesEntryIdx = idx;
+  _tesCurrentTime = entry.time;
+
+  const variants = buildChordVariants(entry.chord);
+  document.getElementById("tes-variants").innerHTML = variants
+    .map((c) => `<button type="button" class="ces-variant-btn" data-chord="${escapeHtml(c)}">${escapeHtml(c)}</button>`)
+    .join("");
+
+  document.getElementById("tes-chord-input").value = entry.chord;
+  _updateTesTimeDisplay();
+  document.getElementById("timeline-edit-sheet").classList.add("active");
+
+  const audio = document.getElementById("play-audio");
+  if (audio && !audio.paused) audio.pause();
+}
+
+function closeTimelineEditSheet() {
+  document.getElementById("timeline-edit-sheet").classList.remove("active");
+}
+
+function _updateTesTimeDisplay() {
+  const el = document.getElementById("tes-time-display");
+  if (el) el.textContent = ChordDetect.formatTime(_tesCurrentTime);
+}
+
+async function applyTesEdit() {
+  const newChord = (document.getElementById("tes-chord-input").value || "").trim();
+  if (!newChord) return;
+  const entry = playTimeline[_tesEntryIdx];
+  if (!entry) return;
+
+  closeTimelineEditSheet();
+
+  if (!currentSongId) return;
+  const song = await dbGet(currentSongId);
+  if (!song) return;
+  const lines = (song.chords || "").split(/\r?\n/);
+  if (entry.lineIdx == null || lines[entry.lineIdx] == null) return;
+
+  lines[entry.lineIdx] = `${ChordDetect.formatTime(_tesCurrentTime)}  ${newChord}`;
+  song.chords = lines.join("\n");
+  await dbPut(song);
+  showToast("修正しました");
+  await refreshSongScreenAfterEdit();
+}
+
+/* ----------------  Detect segment time helper (Feature 2) ---------------- */
+
+function parseDetectTimeInput(str) {
+  const m = (str || "").trim().match(/^(\d+):([0-5]?\d)$/);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+function renderDetectTimeline() {
+  const tl = document.getElementById("detect-timeline");
+  if (!tl || detectSegments.length === 0) return;
+  const first = detectSegments[0].start;
+  const last = detectSegments[detectSegments.length - 1].end;
+  const total = last - first;
+  if (total <= 0) return;
+  tl.innerHTML = detectSegments.map((seg, i) => {
+    const w = ((seg.end - seg.start) / total * 100).toFixed(2);
+    const lbl = seg.chord.length > 4 ? seg.chord.slice(0, 3) : seg.chord;
+    return `<div class="detect-tl-seg" style="flex:${w}" data-tl-index="${i}" title="${escapeHtml(seg.chord)}"><span>${escapeHtml(lbl)}</span></div>`;
+  }).join("");
 }
 
 /* ---------------- Play mode (playback synced with chords) ----------------
@@ -525,6 +675,7 @@ function setupPlayAudio(song) {
 }
 
 function renderPlayPane(song) {
+  playEditMode = false; // reset edit mode whenever the play pane is (re)rendered
   const pane = document.getElementById("pane-play");
   const hasTimeline = playTimeline.length > 0;
   pane.innerHTML = `
@@ -538,7 +689,11 @@ function renderPlayPane(song) {
         <div class="play-chord-name is-empty" id="play-chord-name">${hasTimeline ? "再生してください" : "&#9834;"}</div>
         <div class="play-chord-diagram" id="play-chord-diagram"></div>
       </div>
-      <div class="play-progression" id="play-progression"></div>
+      ${hasTimeline ? `
+      <div class="play-edit-toolbar">
+        <button type="button" id="play-edit-mode-btn" class="play-edit-mode-btn">✏ タイミングを編集</button>
+      </div>` : ""}
+      <div class="play-progression${playEditMode ? " edit-mode" : ""}" id="play-progression"></div>
       <div class="play-transport">
         <div class="play-time-row">
           <span id="play-time-current">0:00</span>
@@ -671,18 +826,9 @@ function seekToTimelineEntry(idx) {
   updatePlayTimeDisplay();
 }
 
-// Long-press / right-click a chip to correct a mis-detected chord name
-// directly in the underlying chord-chart text.
+// Long-press / right-click a chip → opens the timeline edit sheet (Feature 2).
 function quickEditTimelineEntry(idx) {
-  const entry = playTimeline[idx];
-  if (!entry) return;
-  const audio = document.getElementById("play-audio");
-  if (audio && !audio.paused) audio.pause();
-  const newChord = window.prompt("コード名を修正", entry.chord);
-  if (newChord === null) return;
-  const trimmed = newChord.trim();
-  if (!trimmed) return;
-  applyTimelineEdit(entry, trimmed);
+  openTimelineEditSheet(idx);
 }
 
 async function applyTimelineEdit(entry, newChordName) {
@@ -989,19 +1135,56 @@ function renderDetectSegments() {
     list.innerHTML = `<div class="empty-segments">コードを検出できませんでした。別の音源で試すか、手動で入力してください。</div>`;
     return;
   }
-  list.innerHTML = detectSegments.map((seg, i) => `
+
+  // Build visual timeline (proportional widths)
+  const firstStart = detectSegments[0].start;
+  const lastEnd = detectSegments[detectSegments.length - 1].end;
+  const totalDuration = lastEnd - firstStart;
+  let timelineHtml = "";
+  if (totalDuration > 0) {
+    const segs = detectSegments.map((seg, i) => {
+      const w = ((seg.end - seg.start) / totalDuration * 100).toFixed(2);
+      const lbl = seg.chord.length > 4 ? seg.chord.slice(0, 4) : seg.chord;
+      return `<div class="detect-tl-seg" style="flex:${w}" data-tl-index="${i}" title="${escapeHtml(seg.chord)}"><span>${escapeHtml(lbl)}</span></div>`;
+    }).join("");
+    timelineHtml = `<div class="detect-timeline" id="detect-timeline">${segs}</div>`;
+  }
+
+  // Rows: play | editable-start-time | chord-input | delete
+  const rowsHtml = detectSegments.map((seg, i) => `
     <div class="segment-row" data-index="${i}">
       <button type="button" class="segment-play" data-action="play">&#9654;</button>
-      <span class="segment-time">${ChordDetect.formatTime(seg.start)}-${ChordDetect.formatTime(seg.end)}</span>
+      <input type="text" class="segment-time-input" data-action="edit-time"
+             value="${ChordDetect.formatTime(seg.start)}" placeholder="0:00"
+             inputmode="numeric" aria-label="開始時間">
       <input type="text" class="segment-chord-input" data-action="edit" value="${escapeHtml(seg.chord)}">
       <button type="button" class="segment-delete" data-action="delete">&#128465;</button>
     </div>
   `).join("");
+
+  list.innerHTML = timelineHtml + rowsHtml;
 }
 
 function bindDetectSegmentEvents() {
   const list = document.getElementById("detect-segment-list");
+
   list.addEventListener("click", (e) => {
+    // Timeline segment click → scroll to corresponding row & highlight
+    const tlSeg = e.target.closest(".detect-tl-seg");
+    if (tlSeg) {
+      const idx = Number(tlSeg.dataset.tlIndex);
+      const row = list.querySelector(`.segment-row[data-index="${idx}"]`);
+      if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+      list.querySelectorAll(".detect-tl-seg").forEach((s) => s.classList.remove("highlighted"));
+      tlSeg.classList.add("highlighted");
+      list.querySelectorAll(".segment-row").forEach((r) => r.classList.remove("highlighted"));
+      if (row) {
+        row.classList.add("highlighted");
+        setTimeout(() => row.classList.remove("highlighted"), 1400);
+      }
+      return;
+    }
+
     const row = e.target.closest(".segment-row");
     if (!row) return;
     const idx = Number(row.dataset.index);
@@ -1012,11 +1195,42 @@ function bindDetectSegmentEvents() {
       renderDetectSegments();
     }
   });
+
   list.addEventListener("input", (e) => {
     if (e.target.dataset.action === "edit") {
       const row = e.target.closest(".segment-row");
       const idx = Number(row.dataset.index);
       detectSegments[idx].chord = e.target.value;
+      // Live-update the corresponding timeline label
+      const tlSeg = list.querySelector(`.detect-tl-seg[data-tl-index="${idx}"]`);
+      if (tlSeg) {
+        const lbl = e.target.value.length > 4 ? e.target.value.slice(0, 4) : e.target.value;
+        const span = tlSeg.querySelector("span");
+        if (span) span.textContent = lbl || "?";
+        tlSeg.title = e.target.value;
+      }
+    }
+  });
+
+  // Commit editable time on blur/Enter
+  list.addEventListener("change", (e) => {
+    if (e.target.dataset.action === "edit-time") {
+      const row = e.target.closest(".segment-row");
+      if (!row) return;
+      const idx = Number(row.dataset.index);
+      const parsed = parseDetectTimeInput(e.target.value);
+      if (parsed !== null && parsed >= 0) {
+        detectSegments[idx].start = parsed;
+        renderDetectTimeline(); // re-draw proportional bar
+      } else {
+        e.target.value = ChordDetect.formatTime(detectSegments[idx].start);
+      }
+    }
+  });
+
+  list.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.dataset.action === "edit-time") {
+      e.target.blur(); // trigger change event
     }
   });
 }
@@ -1151,6 +1365,52 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("audio-remove-btn").addEventListener("click", removeAudioFile);
 
+  // -------- Chord Edit Sheet (Feature 1) --------
+  const chordEditSheet = document.getElementById("chord-edit-sheet");
+  chordEditSheet.addEventListener("click", (e) => {
+    // Backdrop tap closes
+    if (e.target === chordEditSheet) { closeChordEditSheet(); return; }
+    if (e.target.closest("#ces-close-btn")) { closeChordEditSheet(); return; }
+    // Variant button → immediate apply
+    const varBtn = e.target.closest(".ces-variant-btn");
+    if (varBtn && e.target.closest("#ces-variants")) {
+      applyChordEdit(varBtn.dataset.chord);
+      return;
+    }
+    // Manual apply button
+    if (e.target.id === "ces-apply-btn") {
+      applyChordEdit(document.getElementById("ces-input").value);
+    }
+  });
+  document.getElementById("ces-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") applyChordEdit(e.target.value);
+  });
+
+  // -------- Timeline Entry Edit Sheet (Feature 2) --------
+  const timelineEditSheet = document.getElementById("timeline-edit-sheet");
+  timelineEditSheet.addEventListener("click", (e) => {
+    if (e.target === timelineEditSheet) { closeTimelineEditSheet(); return; }
+    // Time adjustment buttons
+    const adjBtn = e.target.closest(".tes-adj-btn");
+    if (adjBtn) {
+      const delta = Number(adjBtn.dataset.delta);
+      _tesCurrentTime = Math.max(0, _tesCurrentTime + delta);
+      _updateTesTimeDisplay();
+      return;
+    }
+    // Variant button → update chord input (don't close yet)
+    const varBtn = e.target.closest(".ces-variant-btn");
+    if (varBtn && e.target.closest("#tes-variants")) {
+      document.getElementById("tes-chord-input").value = varBtn.dataset.chord;
+      return;
+    }
+    if (e.target.id === "tes-cancel-btn") { closeTimelineEditSheet(); return; }
+    if (e.target.id === "tes-apply-btn") { applyTesEdit(); }
+  });
+  document.getElementById("tes-chord-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { applyTesEdit(); }
+  });
+
   // -------- Play mode: persistent <audio> element events --------
   const playAudioEl = document.getElementById("play-audio");
   playAudioEl.addEventListener("timeupdate", () => {
@@ -1173,10 +1433,27 @@ document.addEventListener("DOMContentLoaded", () => {
       cyclePlayRate();
       return;
     }
+    // Edit mode toggle button
+    if (e.target.closest("#play-edit-mode-btn")) {
+      playEditMode = !playEditMode;
+      const btn = document.getElementById("play-edit-mode-btn");
+      if (btn) {
+        btn.textContent = playEditMode ? "✏ 編集モード中" : "✏ タイミングを編集";
+        btn.classList.toggle("active", playEditMode);
+      }
+      const prog = document.getElementById("play-progression");
+      if (prog) prog.classList.toggle("edit-mode", playEditMode);
+      return;
+    }
     const chip = e.target.closest(".play-chip");
     if (chip) {
       if (suppressChipClick) { suppressChipClick = false; return; }
-      seekToTimelineEntry(Number(chip.dataset.index));
+      const idx = Number(chip.dataset.index);
+      if (playEditMode) {
+        openTimelineEditSheet(idx);
+      } else {
+        seekToTimelineEntry(idx);
+      }
     }
   });
   panePlay.addEventListener("input", (e) => {
