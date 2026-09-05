@@ -197,6 +197,24 @@ textarea { resize: vertical; font-family: "SF Mono", Menlo, monospace; line-heig
 }
 .fab:active { transform: scale(0.97); }
 
+.app-version-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 8px 0 calc(8px + var(--safe-bottom));
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  background: linear-gradient(transparent, var(--bg) 55%);
+  pointer-events: none;
+}
+
 /* ---------- Top bar (song / add / settings screens) ---------- */
 .topbar {
   display: flex;

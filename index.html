@@ -30,6 +30,7 @@
     </div>
     <div id="home-body" class="home-body"></div>
     <button id="fab-add" class="fab">＋ 曲を追加</button>
+    <div id="app-version-footer" class="app-version-footer"></div>
   </section>
 
   <!-- ============ SONG DETAIL ============ -->
@@ -147,6 +148,18 @@
           データは端末内(ブラウザのIndexedDB)にのみ保存され、外部には送信されません。
           iPhone Safariでは長期間アプリを使わないとデータが消える場合があるため、
           ときどき「書き出し」でバックアップを取ることをおすすめします。
+        </p>
+      </div>
+      <div class="settings-group">
+        <h2>バージョン情報</h2>
+        <div class="settings-row">
+          <span>現在のバージョン<span class="hint" id="app-version-settings">-</span></span>
+        </div>
+        <p style="color:var(--text-dim); font-size:13px; line-height:1.8; padding: 0 4px;">
+          GitHubを更新したのにこの数字が変わらない場合、Service Workerのキャッシュが
+          古いページを表示している可能性があります。ホーム画面を一度閉じて開き直しても
+          変わらないときは、Safariの「履歴とWebサイトデータを消去」、または
+          このサイトだけの「Webサイトデータを削除」を試してください。
         </p>
       </div>
     </div>

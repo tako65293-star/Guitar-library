@@ -5,6 +5,16 @@
    ローカル完結(IndexedDB) / PWA / iPhone最優先
    ========================================================= */
 
+/* ---------------- アプリバージョン ----------------
+   GitHubを更新したのに古いページが表示される場合、
+   ホーム画面下部のバージョン表示を見れば
+   「今読み込まれているのがどのビルドか」がすぐ分かる。
+   デプロイのたびにここの数字を必ず上げること。
+   (あわせて sw.js の CACHE_NAME も上げないと
+    Service Workerのキャッシュが更新されず古いままになる) */
+const APP_VERSION = "1.1.0";
+const APP_BUILD_DATE = "2026-09-05";
+
 /* ---------------- IndexedDB layer ---------------- */
 const DB_NAME = "guitarLibraryDB";
 const DB_VERSION = 1;
@@ -1068,6 +1078,15 @@ function applyDetectSegments() {
 
 document.addEventListener("DOMContentLoaded", () => {
   route();
+
+  const versionEl = document.getElementById("app-version-footer");
+  if (versionEl) {
+    versionEl.textContent = `Guitar Library v${APP_VERSION} (${APP_BUILD_DATE})`;
+  }
+  const versionSettingsEl = document.getElementById("app-version-settings");
+  if (versionSettingsEl) {
+    versionSettingsEl.textContent = `v${APP_VERSION} (${APP_BUILD_DATE} ビルド)`;
+  }
 
   document.getElementById("search-input").addEventListener("input", (e) => {
     searchQuery = e.target.value;

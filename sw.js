@@ -1,4 +1,7 @@
-const CACHE_NAME = "guitar-library-v3";
+// デプロイのたびに末尾の数字を必ず上げること。
+// (app.jsのAPP_VERSIONを上げても、ここを上げないと
+//  Service Workerのキャッシュは更新されず古いページが表示され続ける)
+const CACHE_NAME = "guitar-library-v4";
 const APP_SHELL = [
   "./index.html",
   "./style.css",
