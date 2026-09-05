@@ -12,7 +12,7 @@
    デプロイのたびにここの数字を必ず上げること。
    (あわせて sw.js の CACHE_NAME も上げないと
     Service Workerのキャッシュが更新されず古いままになる) */
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 const APP_BUILD_DATE = "2026-09-05";
 
 /* ---------------- IndexedDB layer ---------------- */
